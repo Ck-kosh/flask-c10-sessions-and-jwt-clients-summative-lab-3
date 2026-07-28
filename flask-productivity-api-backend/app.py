@@ -275,9 +275,6 @@ class TaskDetail(Resource):
 
         return {"message": "Task deleted successfully."}, 200
 
-
-# ==================== ROUTE REGISTRATION ====================
-
 api.add_resource(Signup, "/signup")
 api.add_resource(Login, "/login")
 api.add_resource(Logout, "/logout")

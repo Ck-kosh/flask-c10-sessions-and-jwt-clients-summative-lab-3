@@ -1,23 +1,24 @@
 # Productivity API — Flask Backend
 
-A secure, session-based Flask REST API for managing user-owned tasks. Built as a summative lab project demonstrating full authentication, CRUD operations, pagination, and access control.
+A secure Flask REST API for managing user-owned productivity tasks. This backend uses session-based authentication with strong password hashing, task ownership enforcement, and paginated task lists.
 
 ---
 
 ## Project Description
 
-This API powers a productivity tool where registered users can create, read, update, and delete personal tasks. Each task is owned by exactly one user, and users can never view or modify another user's data. The backend is built with **Flask**, **Flask-SQLAlchemy**, **Flask-Bcrypt**, **Flask-RESTful**, and **Marshmallow**.
+This API allows registered users to create, read, update, and delete their own tasks. Each task belongs to a single user, and the application blocks access to tasks owned by other users.
+
+The backend is implemented with **Flask**, **Flask-SQLAlchemy**, **Flask-Bcrypt**, **Flask-RESTful**, and **Marshmallow**.
 
 ### Key Features
 
-- **Session-based authentication** — signup, login, logout, and session persistence
-- **Secure password storage** — bcrypt hashing with salt
-- **Full Task CRUD** — create, list (paginated), read single, update, and delete
-- **Resource isolation** — users only see their own tasks
-- **Input validation** — Marshmallow schemas enforce data integrity
-- **Database migrations** — Flask-Migrate for schema versioning
-- **Seed data** — Faker-powered script for quick demo setup
-- **Test suite** — pytest coverage for auth and CRUD flows
+- Session-based authentication: signup, login, logout, and session persistence
+- Secure password hashing with bcrypt
+- Task CRUD operations with ownership enforcement
+- Paginated task listing
+- Request validation using Marshmallow schemas
+- Demo data seeding with Faker
+- Test coverage via pytest
 
 ---
 
@@ -25,13 +26,12 @@ This API powers a productivity tool where registered users can create, read, upd
 
 | Technology | Version | Purpose |
 |------------|---------|---------|
-| Python | 3.8+ | Runtime |
+| Python | 3.12 | Runtime |
 | Flask | 2.2.2 | Web framework |
 | Flask-SQLAlchemy | 3.0.3 | ORM |
 | Flask-Bcrypt | 1.0.1 | Password hashing |
-| Flask-RESTful | 0.3.9 | REST resource routing |
-| Flask-Migrate | 4.0.0 | Database migrations |
-| Marshmallow | 3.20.1 | Serialization / validation |
+| Flask-RESTful | 0.3.9 | REST routing |
+| Marshmallow | 3.20.1 | Validation and serialization |
 | Faker | 15.3.2 | Seed data generation |
 | pytest | 7.2.0 | Testing |
 
@@ -43,7 +43,7 @@ This API powers a productivity tool where registered users can create, read, upd
 
 ```bash
 git clone https://github.com/Ck-kosh/flask-c10-sessions-and-jwt-clients-summative-lab-3.git
-cd flask-c10-sessions-and-jwt-clients-summative-lab-3
+cd flask-productivity-api-backend
 ```
 
 ### 2. Install dependencies with Pipenv
@@ -52,8 +52,7 @@ cd flask-c10-sessions-and-jwt-clients-summative-lab-3
 pipenv install --python 3.12
 ```
 
-> If you don't have Pipenv installed: `pip install pipenv`
-> If your machine uses a different Python version, replace `3.12` with the installed version you want Pipenv to use.
+> If Pipenv is missing: `pip install pipenv`
 
 ### 3. Activate the virtual environment
 
@@ -61,15 +60,13 @@ pipenv install --python 3.12
 pipenv shell
 ```
 
-### 4. Initialize the database (first time only)
+### 4. Start the server
 
 ```bash
-flask db init          # create migration repository (only once)
-flask db migrate -m "Initial migration"
-flask db upgrade
+flask run
 ```
 
-> **Note:** For development, `db.create_all()` runs automatically when the app starts, so migrations are optional for local testing.
+The app will automatically create the SQLite database tables on first startup.
 
 ### 5. Seed the database with sample data
 
@@ -77,7 +74,7 @@ flask db upgrade
 python seed.py
 ```
 
-This creates 6 demo users (all with password `password123`) and ~36 tasks.
+This creates sample users and tasks, including a demo user with the password `demo123`.
 
 ---
 
@@ -89,9 +86,9 @@ This creates 6 demo users (all with password `password123`) and ~36 tasks.
 flask run
 ```
 
-The API will be available at: `http://localhost:5555`
+The API is available at `http://localhost:5555`.
 
-### Run the test suite
+### Run the tests
 
 ```bash
 pytest -v
@@ -104,12 +101,15 @@ pytest -v
 ### Authentication
 
 | Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
 | `POST` | `/signup` | Register a new user | No |
-| `POST` | `/login` | Log in and create session | No |
-| `DELETE` | `/logout` | Destroy current session | No |
-| `GET` | `/check_session` | Return current user if logged in | No |
+| `POST` | `/login` | Log in and create a session | No |
+| `DELETE` | `/logout` | Log out and clear session | Yes |
+| `GET` | `/check_session` | Return authenticated user data | Yes |
+| `GET` | `/me` | Alias for `/check_session` | Yes |
 
 #### Signup
+
 ```json
 POST /signup
 {
@@ -117,9 +117,11 @@ POST /signup
   "password": "securepass"
 }
 ```
-**Response:** `201 Created` — returns the created user object (without password).
+
+**Response:** `201 Created`
 
 #### Login
+
 ```json
 POST /login
 {
@@ -127,25 +129,44 @@ POST /login
   "password": "securepass"
 }
 ```
-**Response:** `200 OK` — returns the user object and sets a session cookie.
+
+**Response:** `200 OK`
 
 #### Logout
+
+```http
+DELETE /logout
+```
+
 **Response:** `204 No Content`
 
 #### Check Session
 
+```http
+GET /check_session
+```
 
-### Tasks (Protected — requires active session)
+**Response:** `200 OK` when authenticated, otherwise `401 Unauthorized`.
+
+
+### Task Management (Protected Routes)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | `/tasks` | List all tasks for the logged-in user (paginated) |
+| `GET` | `/tasks` | List tasks for the logged-in user |
 | `POST` | `/tasks` | Create a new task |
-| `GET` | `/tasks/<int:id>` | Retrieve a single task by ID |
+| `GET` | `/tasks/<int:id>` | Retrieve a single task |
 | `PATCH` | `/tasks/<int:id>` | Update a task |
 | `DELETE` | `/tasks/<int:id>` | Delete a task |
 
+#### List Tasks
+
+```http
+GET /tasks?page=1&per_page=10
+```
+
 **Response:** `200 OK`
+
 ```json
 {
   "tasks": [...],
@@ -161,6 +182,7 @@ POST /login
 ```
 
 #### Create Task
+
 ```json
 POST /tasks
 {
@@ -171,115 +193,91 @@ POST /tasks
   "due_date": "2026-08-15T23:59:59"
 }
 ```
+
 **Response:** `201 Created`
 
-> Valid `priority` values: `low`, `medium`, `high`, `urgent`  
+> Valid `priority` values: `low`, `medium`, `high`, `urgent`
 > Valid `status` values: `pending`, `in_progress`, `completed`, `archived`
 
 #### Get Single Task
-```
+
+```http
 GET /tasks/42
 ```
-**Response:** `200 OK` if owned by user; `404 Not Found` otherwise.
+
+**Response:** `200 OK` if the task belongs to the authenticated user.
 
 #### Update Task
+
 ```json
 PATCH /tasks/42
 {
   "status": "completed"
 }
 ```
+
 **Response:** `200 OK`
 
 #### Delete Task
-```
+
+```http
 DELETE /tasks/42
 ```
-**Response:** `200 OK` with confirmation message.
+
+**Response:** `200 OK`
 
 ---
 
 ## Project Structure
 
 ```
-flask-productivity-api/
-├── server/
-│   ├── __init__.py       # Package init
-│   ├── app.py            # Application factory, routes, resources
-│   ├── config.py         # Configuration classes
-│   ├── models.py         # SQLAlchemy models (User, Task)
-│   └── schemas.py        # Marshmallow schemas
-├── migrations/           # Flask-Migrate revisions
-├── seed.py               # Database seed script
-├── test_app.py           # pytest test suite
-├── Pipfile               # Pipenv dependency manifest
-├── .flaskenv             # Flask environment variables
-├── .gitignore            # Git ignore rules
-└── README.md             # This file
+flask-productivity-api-backend/
+├── .flaskenv
+├── Pipfile
+├── Pipfile.lock
+├── README.md
+├── seed.py
+├── test_app.py
+└── server/
+    ├── app.py
+    ├── config.py
+    ├── models.py
+    └── schemas.py
 ```
 
 ---
 
-## Models
+## Data Model
 
 ### User
-| Field | Type | Constraints |
-|-------|------|-------------|
-| `id` | Integer | Primary key |
-| `username` | String(80) | Unique, indexed, not null |
-| `_password_hash` | String(128) | Not null (bcrypt) |
-| `created_at` | DateTime | Default: now |
-| `tasks` | Relationship | One-to-many → Task |
+
+- `id` — Integer primary key
+- `username` — String, unique, required
+- `_password_hash` — bcrypt hash, not returned in API output
+- `created_at` — DateTime
 
 ### Task
-| Field | Type | Constraints |
-|-------|------|-------------|
-| `id` | Integer | Primary key |
-| `title` | String(200) | Not null |
-| `description` | Text | Nullable |
-| `priority` | String(20) | Default: `medium` |
-| `status` | String(20) | Default: `pending` |
-| `due_date` | DateTime | Nullable |
-| `created_at` | DateTime | Default: now |
-| `updated_at` | DateTime | Auto-updated on change |
-| `user_id` | Integer | Foreign key → `users.id`, not null |
+
+- `id` — Integer primary key
+- `title` — String, required
+- `description` — Text, optional
+- `priority` — String, default `medium`
+- `status` — String, default `pending`
+- `due_date` — DateTime, optional
+- `created_at` — DateTime
+- `updated_at` — DateTime
+- `user_id` — Integer foreign key to `users.id`
 
 ---
 
-## Security Notes
+## Notes
 
-- Passwords are **never stored in plaintext**. Only bcrypt hashes are persisted.
-- The `_password_hash` attribute is excluded from all JSON serialization.
-- All task endpoints verify the session and enforce **row-level ownership** via `user_id` filtering.
-- Attempting to access another user's task returns `404 Not Found` (not `403`) to prevent ID enumeration.
-
----
-
-## Grading Alignment
-
-| Rubric Criterion | Implementation |
-|------------------|----------------|
-| **Auth (Login / Logout)** | `POST /login`, `DELETE /logout` — correct status codes, bcrypt verification |
-| **Auth (Check Session / Me)** | `GET /check_session` — persists across refresh via session cookie |
-| **Auth (Sign Up)** | `POST /signup` — unique username validation, auto-login |
-| **Auth (Model & Password Protection)** | `User` model with `unique=True`, bcrypt hashing, `_password_hash` protected |
-| **Additional Resource** | `Task` model with 5 custom fields (`title`, `description`, `priority`, `status`, `due_date`) + FK |
-| **Protected Routes** | All `/tasks/*` routes require session; users only access own data |
-| **Code Structure** | Modular: `config.py`, `models.py`, `schemas.py`, `app.py` |
-| **README** | Title, description, installation, run instructions, endpoint docs |
-| **Seed File** | `seed.py` creates users and tasks via Faker; no errors |
-| **Git Workflow** | Feature-ready commits with meaningful messages |
-| **Resource CRUD + Pagination** | Full CRUD on `/tasks` with SQLAlchemy `paginate()` |
-
----
-
-## Author
-
-**Kosh** — Backend Engineer  
-GitHub: [@Ck-kosh](https://github.com/Ck-kosh)
+- The default database is SQLite at `server/app.db`.
+- Session authentication is used for protected routes.
+- `seed.py` creates demo data for fast local testing.
 
 ---
 
 ## License
 
-this project has no license
+This project has no license.

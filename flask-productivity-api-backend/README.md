@@ -104,7 +104,6 @@ pytest -v
 ### Authentication
 
 | Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
 | `POST` | `/signup` | Register a new user | No |
 | `POST` | `/login` | Log in and create session | No |
 | `DELETE` | `/logout` | Destroy current session | No |
@@ -131,18 +130,10 @@ POST /login
 **Response:** `200 OK` — returns the user object and sets a session cookie.
 
 #### Logout
-```
-DELETE /logout
-```
 **Response:** `204 No Content`
 
 #### Check Session
-```
-GET /check_session
-```
-**Response:** `200 OK` with user data if logged in; `401 Unauthorized` otherwise.
 
----
 
 ### Tasks (Protected — requires active session)
 

@@ -12,6 +12,7 @@ function LoginForm({ onLogin }) {
     setIsLoading(true);
     fetch("/login", {
       method: "POST",
+      credentials: "include",
       headers: {
         "Content-Type": "application/json",
       },
@@ -19,9 +20,12 @@ function LoginForm({ onLogin }) {
     }).then((r) => {
       setIsLoading(false);
       if (r.ok) {
-        r.json().then(({token, user}) => onLogin(token, user));
+        r.json().then((payload) => onLogin(payload));
       } else {
-        r.json().then((err) => setErrors(err.errors));
+        r.json().then((err) => {
+          const errorPayload = err.errors || err.error || [err];
+          setErrors(Array.isArray(errorPayload) ? errorPayload : [errorPayload]);
+        });
       }
     });
   }

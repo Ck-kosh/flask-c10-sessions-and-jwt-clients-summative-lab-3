@@ -6,7 +6,7 @@ function App() {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    fetch("/check_session").then((r) => {
+    fetch("/check_session", { credentials: "include" }).then((r) => {
       if (r.ok) {
         r.json().then((user) => setUser(user));
       }

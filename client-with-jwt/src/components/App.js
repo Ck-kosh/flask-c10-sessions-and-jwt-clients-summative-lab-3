@@ -6,20 +6,32 @@ function App() {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    fetch("/me", {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    fetch("/check_session", {
+      credentials: "include",
       headers: {
-        Authorization: `Bearer ${localStorage.getItem("token")}`
+        Authorization: `Bearer ${token}`
       }
     }).then((r) => {
       if (r.ok) {
         r.json().then((user) => setUser(user));
+      } else {
+        localStorage.removeItem("token");
       }
     });
   }, []);
 
-  const onLogin = (token, user) => {
-    localStorage.setItem("token", token);
-    setUser(user);
+  const onLogin = (payload) => {
+    const user = payload?.user ?? payload;
+    const token = payload?.token;
+
+    if (token) {
+      localStorage.setItem("token", token);
+    }
+
+    setUser(user || null);
   }
 
   if (!user) return <Login onLogin={onLogin} />;

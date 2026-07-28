@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Button, Error, Input, FormField, Label, Textarea } from "../styles";
+import { Button, Error, Input, FormField, Label } from "../styles";
 
 function SignUpForm({ onLogin }) {
   const [username, setUsername] = useState("");
@@ -14,20 +14,33 @@ function SignUpForm({ onLogin }) {
     setIsLoading(true);
     fetch("/signup", {
       method: "POST",
+      credentials: "include",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
         username,
-        password,
-        password_confirmation: passwordConfirmation
+        password
       }),
     }).then((r) => {
       setIsLoading(false);
       if (r.ok) {
-        r.json().then(({token, user}) => onLogin(token, user));
+        r.json().then((payload) => onLogin(payload));
       } else {
-        r.json().then((err) => setErrors(err.errors));
+        r.json().then((err) => {
+          const errorPayload = err.errors || err.error || [err];
+          const normalizedErrors = (Array.isArray(errorPayload)
+            ? errorPayload
+            : [errorPayload]
+          ).map((item) => {
+            if (typeof item === "string") return item;
+            if (item && typeof item === "object") {
+              return Object.values(item).flat().join(" ");
+            }
+            return String(item);
+          });
+          setErrors(normalizedErrors);
+        });
       }
     });
   }
